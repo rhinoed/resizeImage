@@ -11,16 +11,19 @@ import ArgumentParser
 
 @main
 struct resizeImage: ParsableCommand {
-	@Argument(help: "The input image file path.") var input: [String]
+	@Argument(help: "The file path to input image(s).") var input: [String]
 	// Flags
 	@Flag(name: .shortAndLong, help: "Enable verbose output.") var verbose: Bool = false
 	@Flag(name: .shortAndLong, help: "Delete input file after resizing") var delete: Bool = false
 	// Options
-	@Option(name: .shortAndLong, help: "The scale factor to apply") var scale: Float = 1.0
-	@Option(name: [.customShort("W"), .customLong("width")]) var width: Int?
-	@Option(name: [.customShort("H"), .customLong("height")], help: "image height") var height: Int?
-	@Option(name: .shortAndLong, help: "output file path") var output: String?
 	@Option(name: .shortAndLong, help: "Image format (png, jpeg, gif)") var format: String = "png"
+	@Option(name: .shortAndLong, help: "output file path (full path) default: input file path") var output: String?
+	@Option(name: .shortAndLong, help: "The scale factor to apply") var scale: Float = 1.0
+	@Option(name: [.customShort("H"), .customLong("height")], help: "resized image height") var height: Int?
+	@Option(name: [.customShort("W"), .customLong("width")], help: "resized image width") var width: Int?
+	
+	
+	
 	
 	mutating func run() throws {
 		
@@ -61,7 +64,7 @@ struct resizeImage: ParsableCommand {
 				print("resizing image...")
 			}
 			let resizedImage = resizeImage(image: image ,to: targetSize)
-			// set output pathe
+			// set output path
 			var outputPath: URL
 			if #available(macOS 13.0, *) {
 				outputPath = URL(filePath: output ?? parentDirectoryURL.relativePath + "/" + fileName + "-resized.\(format)")
@@ -75,12 +78,11 @@ struct resizeImage: ParsableCommand {
 			}
 			do {
 				try writeImage(resizedImage, to: outputPath)
-				print(outputPath)
+				print("write successful to: \(outputPath)")
 			} catch {
 				print("error: \(error)")
 				return
 			}
-			print("write complete")
 			// delete if true
 			if delete && verbose {
 				print("deleting input file...")
