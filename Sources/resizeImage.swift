@@ -12,16 +12,18 @@ import ArgumentParser
 @main
 struct resizeImage: ParsableCommand {
 	@Argument(help: "The input image file path.") var input: [String]
+	// Flags
 	@Flag(name: .shortAndLong, help: "Enable verbose output.") var verbose: Bool = false
 	@Flag(name: .shortAndLong, help: "Delete input file after resizing") var delete: Bool = false
-	@Option(name: [.customShort("s"), .customLong("scale")], help: "The scale factor.") var scale: Float = 1.0
+	// Options
+	@Option(name: .shortAndLong, help: "The scale factor to apply") var scale: Float = 1.0
 	@Option(name: [.customShort("W"), .customLong("width")]) var width: Int?
 	@Option(name: [.customShort("H"), .customLong("height")], help: "image height") var height: Int?
 	@Option(name: .shortAndLong, help: "output file path") var output: String?
 	@Option(name: .shortAndLong, help: "Image format (png, jpeg, gif)") var format: String = "png"
 	
-    mutating func run() throws {
-        
+	mutating func run() throws {
+		
 		for path in input {
 			// check if path exists in the file system
 			if verbose {
@@ -31,10 +33,12 @@ struct resizeImage: ParsableCommand {
 				print("error: file not found: \(path)")
 				continue
 			}
+			// create url from path
 			let inputURL = URL(fileURLWithPath: path)
 			let fileName = inputURL.deletingPathExtension().lastPathComponent
 			let parentDirectoryURL = inputURL.deletingLastPathComponent()
 			
+			// create image data
 			if verbose {
 				print("getting data for \(path)...")
 			}
@@ -46,23 +50,25 @@ struct resizeImage: ParsableCommand {
 				print("error: cannot load image")
 				continue
 			}
+			// calculate image size
 			if verbose {
 				print("calculating target size...")
 			}
 			let targetSize = getTargetSize(width: width, height: height, imageSize: image.size)
-		
+			// resize image
 			if verbose {
 				print("calculation complete image will ber resized from \(image.size) to \(targetSize)")
 				print("resizing image...")
 			}
 			let resizedImage = resizeImage(image: image ,to: targetSize)
+			// set output pathe
 			var outputPath: URL
 			if #available(macOS 13.0, *) {
 				outputPath = URL(filePath: output ?? parentDirectoryURL.relativePath + "/" + fileName + "-resized.\(format)")
 			} else {
 				outputPath = URL(fileURLWithPath: output ?? parentDirectoryURL.relativePath + "/" + fileName + "-resized.\(format)")
 			}
-			
+			// writing image
 			if verbose {
 				print("output will be written to \(outputPath)")
 				print("attempting to write output...")
@@ -75,12 +81,13 @@ struct resizeImage: ParsableCommand {
 				return
 			}
 			print("write complete")
+			// delete if true
 			if delete && verbose {
 				print("deleting input file...")
 				deleteInputFiles()
 			}
 		}
-    }
+	}
 	
 	func deleteInputFiles() {
 		for path in input {
@@ -100,15 +107,15 @@ struct resizeImage: ParsableCommand {
 	func writeImage(_ image: NSImage, to url: URL) throws {
 		var filtType: NSBitmapImageRep.FileType;
 		switch format {
-			case "jpeg":
-				filtType = .jpeg
-			case "gif":
-				filtType = .gif
-			case "png":
-				filtType = .png
-			default:
-				print("error: unsupported format: \(format)")
-				throw NSError(domain: "", code: 1, userInfo: nil)
+		case "jpeg":
+			filtType = .jpeg
+		case "gif":
+			filtType = .gif
+		case "png":
+			filtType = .png
+		default:
+			print("error: unsupported format: \(format)")
+			throw NSError(domain: "", code: 1, userInfo: nil)
 		}
 		guard let imgRep = image.tiffRepresentation,
 			  let btm = NSBitmapImageRep(data: imgRep),
@@ -119,9 +126,9 @@ struct resizeImage: ParsableCommand {
 		}
 		
 		try imgData.write(to: url)
-
-		}
-
+		
+	}
+	
 	func resizeImage(image: NSImage, to size: NSSize) -> NSImage {
 		let newImage = NSImage(size: size, flipped: false){ rect in
 			image.draw(in: rect, from: NSRect(origin: .zero, size: image.size), operation: .copy, fraction: 1.0)
