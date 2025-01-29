@@ -11,6 +11,9 @@ import ArgumentParser
 
 @main
 struct resizeImage: ParsableCommand {
+	// configuration
+	static let configuration: CommandConfiguration = CommandConfiguration(commandName: "resizeImage", abstract: "A simple command-line tool to resize image(s).", usage: "resizeImage [options] <file path>", discussion: "Visit https://github.com/rhinoed/resizeImage for more information.", version: "1.0", aliases: ["rsi"])
+	// arguments
 	@Argument(help: "The file path to input image(s).") var input: [String]
 	// Flags
 	@Flag(name: .shortAndLong, help: "Enable verbose output.") var verbose: Bool = false
