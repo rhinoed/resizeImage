@@ -1,17 +1,18 @@
 # resizeImage
 
-A simple CLI tool which allows you to resize jpeg, png, and gif files.
+A simple CLI tool which allows you to resize jpeg, png, and gif images.
 It was written in Swift and uses Swift Argument Parser.
 
 ## Installation
 
 - clone repo into desired location
 - `cd` into that location
-- run
+- run command below
 
   ```bash
   make resizeImage
   ```
+
 - if you run into permission error run
 
   ```bash
