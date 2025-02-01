@@ -4,8 +4,8 @@
 // Swift Argument Parser
 // https://swiftpackageindex.com/apple/swift-argument-parser/documentation
 
-import AppKit
 import Foundation
+import ImageSizer
 import ArgumentParser
 
 
@@ -25,16 +25,13 @@ struct resizeImage: ParsableCommand {
 	@Option(name: [.customShort("H"), .customLong("height")], help: "resized image height") var height: Int?
 	@Option(name: [.customShort("W"), .customLong("width")], help: "resized image width") var width: Int?
 	
-	
-	
-	
 	mutating func run() throws {
-		
+		//Messanger.verbose = verbose
 		for path in input {
+			
 			// check if path exists in the file system
-			if verbose {
-				print("checking if file exists: \(path)...")
-			}
+			Message.fileExists.action(path)
+			
 			guard FileManager.default.fileExists(atPath: path) else {
 				print("error: file not found: \(path)")
 				continue
@@ -45,48 +42,30 @@ struct resizeImage: ParsableCommand {
 			let parentDirectoryURL = inputURL.deletingLastPathComponent()
 			
 			// create image data
-			if verbose {
-				print("getting data for \(path)...")
-			}
-			let data = try Data(contentsOf: URL(fileURLWithPath: path))
-			if verbose {
-				print("loading image...")
-			}
-			guard let image = NSImage(data: data)else{
+			Message.gettingFile.action(path)
+			
+			let imageLoader = ImageLoader()
+			Message.loadingImage.action("...")
+			guard let image = imageLoader.cgLoadImage(from: inputURL) else{
 				print("error: cannot load image")
 				continue
 			}
 			// calculate image size
-			if verbose {
-				print("calculating target size...")
-			}
-			let targetSize = getTargetSize(width: width, height: height, imageSize: image.size)
-			// resize image
-			if verbose {
-				print("calculation complete image will ber resized from \(image.size) to \(targetSize)")
-				print("resizing image...")
-			}
-			let resizedImage = resizeImage(image: image ,to: targetSize)
-			// set output path
+			Message.calculatingSize.action("...")
+			let targetSize: (Int,Int) = ImageSizer.getTargetSize(width: width, height: height, image: image)
+			print(targetSize)
+			let imageSizer = ImageSizer(image: image, targetWidth: targetSize.0, targetHeight: targetSize.1)
+			
+			Message.savingImage.action("calculation complete image will ber resized from \(image.width.description),x\(image.height.description)to \(imageSizer.targetWidth),x\(imageSizer.targetHeight)\nresizing image...")
+			
 			var outputPath: URL
 			if #available(macOS 13.0, *) {
 				outputPath = URL(filePath: output ?? parentDirectoryURL.relativePath + "/" + fileName + "-resized.\(format)")
 			} else {
 				outputPath = URL(fileURLWithPath: output ?? parentDirectoryURL.relativePath + "/" + fileName + "-resized.\(format)")
 			}
-			// writing image
-			if verbose {
-				print("output will be written to \(outputPath)")
-				print("attempting to write output...")
-			}
-			do {
-				try writeImage(resizedImage, to: outputPath)
-				print("write successful to: \(outputPath)")
-			} catch {
-				print("error: \(error)")
-				return
-			}
-			// delete if true
+			imageSizer.resize(image: image, to: outputPath)
+			//Message.done.action("")
 			if delete && verbose {
 				print("deleting input file...")
 				deleteInputFiles()
@@ -106,52 +85,5 @@ struct resizeImage: ParsableCommand {
 			}
 		}
 	}
-	
-	
-	
-	func writeImage(_ image: NSImage, to url: URL) throws {
-		var filtType: NSBitmapImageRep.FileType;
-		switch format {
-		case "jpeg":
-			filtType = .jpeg
-		case "gif":
-			filtType = .gif
-		case "png":
-			filtType = .png
-		default:
-			print("error: unsupported format: \(format)")
-			throw NSError(domain: "", code: 1, userInfo: nil)
-		}
-		guard let imgRep = image.tiffRepresentation,
-			  let btm = NSBitmapImageRep(data: imgRep),
-			  let imgData = btm.representation(using: filtType, properties: [:])
-		else {
-			print("error: cannot convert image to PNG data")
-			throw NSError(domain: "", code: 1, userInfo: nil)
-		}
 		
-		try imgData.write(to: url)
-		
-	}
-	
-	func resizeImage(image: NSImage, to size: NSSize) -> NSImage {
-		let newImage = NSImage(size: size, flipped: false){ rect in
-			image.draw(in: rect, from: NSRect(origin: .zero, size: image.size), operation: .copy, fraction: 1.0)
-			return true
-		}
-		return newImage
-	}
-	
-	func getTargetSize(width: Int?, height: Int?, imageSize: NSSize) -> NSSize {
-		if let width = width, let height = height {
-			return NSSize(width: CGFloat(width), height: CGFloat(height))
-		} else if let width = width {
-			let scaleFactor = CGFloat(width) / imageSize.width
-			return NSSize(width: CGFloat(width), height: CGFloat(imageSize.height * scaleFactor))
-		} else if let height = height {
-			let scaleFactor = CGFloat(height) / imageSize.height
-			return NSSize(width: CGFloat(imageSize.width * scaleFactor), height: CGFloat(height))
-		}
-		return NSSize(width: imageSize.width * CGFloat(scale), height: imageSize.height * CGFloat(scale))
-	}
 }
